@@ -1,0 +1,28 @@
+git clone https://github.com/brian2lee/UVC_YOLOX.git
+
+cd UVC_YOLOX/docker
+
+docker build -t ryolox .
+
+docker run -it -d --gpus all --name uvc_yolox -v /home/brian/UVC_YOLOX:/workspace/YOLOX -v /home/brian/UVC_YOLOX/datasets:/workspace/datasets --user root ryolox /bin/bash
+
+
+docker start -ai uvc_yolox
+
+cd /workspace/YOLOX
+
+pip3 install -v -e .
+
+cd cuda_op
+
+pip3 install -v -e .
+
+cd ../DOTA_devkit
+
+pip3 install -v -e .
+
+cd /workspace/YOLOX/data_transform
+
+python3 json2voc_MVTEC.py
+
+

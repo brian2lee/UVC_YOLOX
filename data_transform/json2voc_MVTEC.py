@@ -260,10 +260,19 @@ def num_class(set_path):
     for i in val_tree["annotations"]:
         Num_train[i["category_id"]-1]=Num_train[i["category_id"]-1]+1
     return VOC_CLASSES,Num_train,Num_test
-# to_yolo_txt(type_i="json",type_o="xml",dir_name="/home/rvl224/文件/MVTEC",set_path="/home/rvl224/文件/MVTEC/mvtec_screws_test.json")
-clss,train_data,test_data=num_class(set_path="/home/rvl224/文件/MVTEC")
+    
+clss,train_data,test_data=num_class(set_path="/workspace/datasets/archive")
 
 print(clss)
 print(train_data.tolist())
 print(train_data.sum())
 print(test_data.tolist())
+
+os.makedirs("/workspace/datasets/voc_screw/Annotations", exist_ok=True)
+
+to_yolo_txt(
+    type_i="json",
+    type_o="xml",
+    dir_name="/workspace/datasets/voc_screw/Annotations",
+    set_path="/workspace/datasets/archive/mvtec_screws_train.json"
+)
