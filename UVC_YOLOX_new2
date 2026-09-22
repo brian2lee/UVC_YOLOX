@@ -1,0 +1,126 @@
+*** git ***
+git clone https://github.com/brian2lee/UVC_YOLOX.git
+#git clone https://github.com/RVL224/UVC_YOLOX.git
+*** docker build ***
+cd UVC_YOLOX/docker
+
+docker build -t ryolox .
+
+docker run -it -d \
+    --gpus all \
+    --name uvc_yolox_s \
+    -v /home/brian/UVC_YOLOX:/workspace \
+    -v /home/brian/UVC_YOLOX/pretrained:/pretrained \
+    -v /home/brian/UVC_YOLOX/outputs:/outputs \
+    ryolox
+
+#docker run -it -d \
+    --gpus all \
+    --name uvc_yolox_s \
+    -v /home/brian/UVC_YOLOX:/workspace \
+    ryolox
+*** start container ***
+docker start uvc_yolox_s
+
+docker exec -it uvc_yolox_s /bin/bash
+
+pip3 install opencv-python #first time
+
+@@@ files changes@@@
+put dataset(MVTec_screws) into /workspace/datasets
+
+(gedit /home/brian/UVC_YOLOX/data_transform/json2voc_MVTEC.py /home/brian/UVC_YOLOX/tools/train.py /home/brian/UVC_YOLOX/exps/example/yolox_voc/yolox_MVTEC_voc_s.py /home/brian/UVC_YOLOX/exps/example/yolox_voc/Re50_MVTEC_voc_s.py)
+
+</workspace/data_transform/json2voc_MVTEC.py>
+	clss,train_data,test_data=num_class(set_path="/home/rvl224/文件/MVTEC")
+	to
+	clss,train_data,test_data=num_class(set_path="/workspace/datasets/MVTec_screws")
+	
+</workspace/tools/train.py>
+	parser.add_argument("-c", "--ckpt", default="backup/resnet50.pth", type=str, help="checkpoint file")
+	->
+	parser.add_argument("-c", "--ckpt", default=None, type=str, help="checkpoint file")
+	
+	default="/home/rvl224/文件/y/YOLOX/exps/example/yolox_voc/Re50_MVTEC_voc_s.py",
+	->
+	default="/workspace/exps/example/yolox_voc/Re50_MVTEC_voc_s.py",
+	
+</workspace/UVC_YOLOX/exps/example/yolox_voc/yolox_MVTEC_voc_s.py>
+	data_dir="/home/rvl224/文件/MVTEC",
+	->
+	data_dir="/workspace/datasets/MVTec_screws",
+</workspace/exps/example/yolox_voc/Re50_MVTEC_voc_s.py>
+	data_dir="/home/rvl224/文件/MVTEC",
+	->
+	data_dir="/workspace/datasets/MVTec_screws",
+*** data transform ***
+cd /workspace/data_transform
+
+python json2voc_MVTEC.py
+
+*** train ***
+cd /workspace
+
+pip3 install -e .
+
+cd /workspace/cuda_op
+
+pip3 install -v -e .
+
+cd /workspace/DOTA_devkit
+
+pip3 install -v -e .
+
+cd /workspace
+
+export LD_LIBRARY_PATH=/opt/conda/lib/python3.7/site-packages/torch/lib:$LD_LIBRARY_PATH
+
+export PYTHONPATH=/workspace/cuda_op:$PYTHONPATH
+
+*** modify training ***
+</workspace/yolox/exp/yolox_base.py>
+self.max_epoch = 600 #max epoch
+
+self.no_aug_epochs = 15 #no mosaic epoch
+
+>start
+python3 tools/train.py -b 8 -f exps/example/yolox_voc/yolox_MVTEC_voc_s.py
+
+>continue
+(check last time's epoch)
+python3 - <<'PY'
+import torch
+
+ckpt = torch.load(
+    "YOLOX_outputs/yolo_MVTEC/latest_ckpt.pth",
+    map_location="cpu"
+)
+
+print("start_epoch:", ckpt["start_epoch"])
+print("best_ap:", ckpt["best_ap"])
+print("curr_ap:", ckpt["curr_ap"])
+PY
+
+(change -e <start epoch>)
+python3 tools/train.py \
+    -b 8 \
+    -f exps/example/yolox_voc/yolox_MVTEC_voc_s.py \
+    --resume \
+    -e 26
+
+#python3 tools/train.py -b 16 -f /path/to/your/config/file -c /path/to/pretrainmodel
+
+*** visualize (/workspace/YOLOX_outputs/yolo_MVTEC_demo)***
+python3 tools/demo_o.py \
+    -f exps/example/yolox_voc/yolox_MVTEC_voc_s.py \
+    -c YOLOX_outputs/yolo_MVTEC/latest_ckpt.pth \
+    --path datasets/MVTec_screws/images/screws_121.png \
+    --device gpu \
+    --conf 0.25 \
+    --nms 0.45 \
+    --save_result
+    
+!!!
+(trying to get cs evaluation)
+/home/brian/backup_YOLOX/voc_eval.py
+/home/brian/backup_YOLOX/voc.py
