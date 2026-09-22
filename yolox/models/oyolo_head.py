@@ -536,11 +536,12 @@ class OritateHead(nn.Module):
 
         vectors_preds = ang_preds.view(-1,self.coder_size)[fg_masks]
         gt_vectors = ang_targets
+        
         """
         vector loss
         """
-        # cos_d =nn.CosineSimilarity(dim=1,eps=1e-6)
-
+        cos_d =nn.CosineSimilarity(dim=1,eps=1e-6)
+        cs = cos_d(vectors_preds, gt_vectors).mean().detach()
         # loss_c =1-cos_d(vectors_preds,gt_vectors)
         # # loss_c= torch.nan_to_num(loss_c,2.0)
         # loss_c = torch.pow(loss_c,2)
@@ -603,6 +604,7 @@ class OritateHead(nn.Module):
             loss_ang,
             loss_l1,
             num_fg / max(num_gts, 1),
+            cs,
         )
 
     def get_l1_target(self, l1_target, gt, stride, x_shifts, y_shifts, eps=1e-8):

@@ -34,7 +34,7 @@ class YOLOX(nn.Module):
         if self.training:
             assert targets is not None
             if self.head_type=="ROT" or self.head_type=="ORI":
-                loss, iou_loss,conf_loss, cls_loss,ang_loss ,l1_loss, num_fg = self.head(
+                loss, iou_loss,conf_loss, cls_loss,ang_loss ,l1_loss, num_fg, cs = self.head(
                     fpn_outs, targets, x
                 )
                 
@@ -46,6 +46,7 @@ class YOLOX(nn.Module):
                     "conf_loss": conf_loss,
                     "cls_loss": cls_loss,
                     "num_fg": num_fg,
+                    "cs": cs,
             }
             else:
                 loss, iou_loss, conf_loss, cls_loss, l1_loss, num_fg = self.head(

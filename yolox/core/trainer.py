@@ -242,9 +242,9 @@ class Trainer:
             )
             loss_meter = self.meter.get_filtered_meter("loss")
             loss_str = ", ".join(
-                ["{}: {:.1f}".format(k, v.latest) for k, v in loss_meter.items()]
+                ["{}: {:.6f}".format(k, v.latest) for k, v in loss_meter.items()]
             )
-
+            cs_str = "cs: {:.6f}".format(self.meter["cs"].latest)
             time_meter = self.meter.get_filtered_meter("time")
             time_str = ", ".join(
                 ["{}: {:.3f}s".format(k, v.avg) for k, v in time_meter.items()]
@@ -253,11 +253,12 @@ class Trainer:
             mem_str = "gpu mem: {:.0f}Mb, mem: {:.1f}Gb".format(gpu_mem_usage(), mem_usage())
 
             logger.info(
-                "{}, {}, {}, {}, lr: {:.3e}".format(
+                "{}, {}, {}, {}, {}, lr: {:.3e}".format(
                     progress_str,
                     mem_str,
                     time_str,
                     loss_str,
+                    cs_str,
                     self.meter["lr"].latest,
                 )
                 + (", size: {:d}, {}".format(self.input_size[0], eta_str))
