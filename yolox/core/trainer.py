@@ -55,6 +55,9 @@ class Trainer:
         self.data_type = torch.float16 if args.fp16 else torch.float32
         self.input_size = exp.input_size
         self.best_ap = 0
+        self.best_epoch = 0
+        self.best_map50 = 0
+        self.best_cs = 0
 
         # metric record
         self.meter = MeterBuffer(window_size=exp.print_interval)
@@ -125,7 +128,8 @@ class Trainer:
             lr=lr,
             **outputs,
         )
-
+        self.current_cs = outputs["cs"]
+        
     def before_train(self):
         logger.info("args: {}".format(self.args))
         logger.info("exp value:\n{}".format(self.exp))
@@ -297,6 +301,9 @@ class Trainer:
             model.load_state_dict(ckpt["model"])
             self.optimizer.load_state_dict(ckpt["optimizer"])
             self.best_ap = ckpt.pop("best_ap", 0)
+            self.best_epoch = ckpt.pop("best_epoch", 0)
+            self.best_map50 = ckpt.pop("best_map50", 0)
+            self.best_cs = ckpt.pop("best_cs", 0)
             # resume the training states variables
             start_epoch = (
                 self.args.start_epoch - 1
@@ -336,7 +343,11 @@ class Trainer:
             )
 
         update_best_ckpt = ap50_95 > self.best_ap
-        self.best_ap = max(self.best_ap, ap50_95)
+        if update_best_ckpt:
+            self.best_ap = ap50_95
+            self.best_epoch = self.epoch + 1
+            self.best_map50 = ap50
+            self.best_cs = getattr(self, "current_cs", 0)
 
         if self.rank == 0:
             if self.args.logger == "tensorboard":
@@ -353,8 +364,46 @@ class Trainer:
         synchronize()
 
         self.save_ckpt("last_epoch", update_best_ckpt, ap=ap50_95)
+
+        if update_best_ckpt:
+            self.save_result_file()
+
         if self.save_history_ckpt:
             self.save_ckpt(f"epoch_{self.epoch + 1}", ap=ap50_95)
+    
+    def save_result_file(self):
+        if self.rank != 0:
+            return
+
+        result_file = os.path.join(self.file_name, "result.txt")
+
+        with open(result_file, "w") as f:
+            f.write("========================================\n")
+            f.write("YOLOX MVTec Experiment Result\n")
+            f.write("========================================\n\n")
+
+            f.write("Best Checkpoint:\n")
+            f.write("  {}\n\n".format(
+                os.path.join(self.file_name, "best_ckpt.pth")
+            ))
+
+            f.write("Best Epoch:\n")
+            f.write("  {}\n\n".format(self.best_epoch))
+
+            f.write("Validation Metrics:\n")
+            f.write("  mAP@0.50:       {:.2f}%\n".format(
+                self.best_map50 * 100
+            ))
+            f.write("  mAP@0.50:0.95:  {:.2f}%\n\n".format(
+                self.best_ap * 100
+            ))
+
+            f.write("Angle Metric:\n")
+            f.write("  Training CS:    {:.6f}\n\n".format(
+                self.best_cs
+            ))
+
+            f.write("========================================\n")
 
     def save_ckpt(self, ckpt_name, update_best_ckpt=False, ap=None):
         if self.rank == 0:
@@ -365,6 +414,9 @@ class Trainer:
                 "model": save_model.state_dict(),
                 "optimizer": self.optimizer.state_dict(),
                 "best_ap": self.best_ap,
+                "best_epoch": self.best_epoch,
+                "best_map50": self.best_map50,
+                "best_cs": self.best_cs,
                 "curr_ap": ap,
             }
             save_checkpoint(
