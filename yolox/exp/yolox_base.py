@@ -70,7 +70,7 @@ class Exp(BaseExp):
         # epoch number used for warmup
         self.warmup_epochs = 5
         # max training epoch
-        self.max_epoch = 3000
+        self.max_epoch = 600
         # minimum learning rate during warmup
         self.warmup_lr = 0
         self.min_lr_ratio = 0.05
@@ -79,7 +79,7 @@ class Exp(BaseExp):
         # name of LRScheduler
         self.scheduler = "yoloxwarmcos"
         # last #epoch to close augmention like mosaic
-        self.no_aug_epochs = 0
+        self.no_aug_epochs = 30
         # apply EMA during training
         self.ema = True
 
@@ -120,7 +120,7 @@ class Exp(BaseExp):
                     m.momentum = 0.03
 
         if getattr(self, "model", None) is None:
-            in_channels = [256, 512, 1024]
+            in_channels = [128, 256, 512, 1024]
 
             backbone = YOLOPAFPN(self.depth, self.width, in_channels=in_channels, act=self.act)
 
